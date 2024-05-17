@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>Vue App</title>
+</head>
+<body>
+    <div>Hello, {{miconName}} with WebSocket</div>
+
+    <div id="host">{{host}}</div>
+
+    <div id="vue-app"></div>
+
+    <script>
+
+        const host = document.getElementById('host').innerHTML;
+        var ws = new WebSocket(`ws://${host}:80`);
+        ws.onopen = function() {
+            ws.send('Hello, WebSocket Server');
+        };
+        ws.onmessage = function(e) {
+            console.log(e.data);
+            document.getElementById('host').innerHTML = e.data;
+        };
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,13 @@
+{
+    "name": "utemplate_test",
+    "stubs": {
+        "micropython-esp32-stubs": "1.20.0.post1"
+    },
+    "dev-packages": {
+        "micropy-cli": "*"
+    },
+    "packages": {},
+    "config": {
+        "vscode": true
+    }
+}
