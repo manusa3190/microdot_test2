@@ -2,19 +2,122 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>Vue App</title>
+  <style>
+    body {
+        font-size: 4rem;
+        font-family: 'Arial', sans-serif;
+    }
+    h1 {
+        font-size: 5rem;
+    }
+    dl {
+        display: flex;
+        font-size: inherit;
+    }
+    form {
+        display: flex;
+        flex-direction: column;
+    }
+
+    form > * {
+        margin-block: 1rem;
+    }
+
+    button {
+        margin: 1rem;
+        font-size: inherit;
+        background-color: chartreuse;
+        border-radius: 1rem;
+    }
+    button:active {
+        background-color: darkseagreen;
+    }
+
+  </style>
 </head>
 <body>
-    <div>Hello, {{miconName}} with WebSocket</div>
+    <h1>{{miconName}}</h1>
 
-    <div id="host">{{host}}</div>
+    <dl>
+        <dt >ESPとの接続：</dt>
+        <div>
+            <dd id="status">接続中</dd>
+            <dd style="font-size: 3rem;">
+                <span id="host">{{host}}</span>
+                <span>:</span>
+                <span id="port">{{port}}</span>
+            </dd>
+        </div>
+    </dl>
 
-    <div id="vue-app"></div>
+    <dl>
+        <dt >ネットワーク接続：</dt>
+        <dd id="status">接続中</dd>        
+    </dl>
+
+
+    <form>
+        <label for="ssid">
+            <span>SSID</span>
+            <select name="ssid" id="ssid" onfocus="startScan()" onblur="stopScan()" onchange="setSSID(this)" 
+            style="font-size: inherit;"
+            >
+                <option>選択してください</option>
+            </select>
+        </label>
+
+        <label for="password" style="width: 100vw;padding-right: 1rem;">
+            <span>Password</span>
+            <input type="password" name="password" value="456" style="font-size: inherit;">
+        </label>
+        
+        <button type="submit">接続試行</button>
+    </form>
+
+    <div>
+        <div>接続結果</div>
+        <div id="connect-result"></div>
+    </div>
+
 
     <script>
+        document.querySelector('form').addEventListener('submit', submitForm);
+
+        function submitForm(e) {
+            e.preventDefault();
+
+            const form = document.querySelector('form');
+
+            const ssid = form.ssid.value;
+            const password = form.password.value;
+
+            console.log(ssid, password);
+            
+            fetch(`/try_connect`,{
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ ssid, password })
+            }).then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json()
+            }).then(data => {
+                console.log(data);
+                document.getElementById('connect-result').innerHTML = data.result;
+
+            }).catch(error => {
+                console.error('There has been a problem with your fetch operation:', error);
+            });
+        }        
 
         const host = document.getElementById('host').innerHTML;
-        var ws = new WebSocket(`ws://${host}:80`);
+        console.log('host:',host);
+
+
+        var ws = new WebSocket(`ws://${host}:80/get_status`);
         ws.onopen = function() {
             ws.send('Hello, WebSocket Server');
         };
@@ -22,6 +125,54 @@
             console.log(e.data);
             document.getElementById('host').innerHTML = e.data;
         };
+        ws.onclose = function() {
+            console.log('Connection is closed');
+        };
+
+        var scanning = true;
+        const startScan=()=> scanning = true;
+        const stopScan=()=> scanning = false;
+
+        var ssid;
+        function setSSID(elem) {
+            ssid = elem.value;
+
+            // ssidを更新
+            var select = document.getElementById('ssid');
+            select.innerHTML = '';
+            var option = document.createElement('option');
+            option.value = ssid;
+            option.text = ssid;
+            select.appendChild(option);
+
+            stopScan()
+        }
+
+        // スキャン
+        const scan_ws = new WebSocket(`ws://${host}:80/scan_wifi`);
+        scan_ws.onopen = function() {
+            scan_ws.send('Hello, WebSocket Server');
+        };
+        scan_ws.onmessage = function(e) {
+            if(!scanning)return
+
+            const selectElem = document.getElementById('ssid');
+            selectElem.innerHTML = '';
+            ssids = JSON.parse(e.data);
+            ssids.filter(ssid => ssid).forEach((ssid) => {
+                const option = document.createElement('option');
+                option.value = ssid;
+                option.text = ssid;
+                selectElem.appendChild(option);
+            });
+
+        };
+        scan_ws.onclose = function() {
+            console.log('scan_wifi Connection is closed');
+        };
+
+
+
     </script>
 
 </body>
